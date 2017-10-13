@@ -1,0 +1,1 @@
+# centos_vuln_check_script
