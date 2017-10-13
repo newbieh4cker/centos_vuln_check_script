@@ -4,6 +4,14 @@
 # bob3rdnewbie.tistory.com
 
 
+
+# check priv
+if [ "$EUID" -ne 0 ]
+	then echo "root 권한으로 스크립트를 실행하여 주십시오."
+	exit
+fi
+
+
 alias ls=ls
 CF=`hostname`"_scan_result_"`date +%F__%T`.txt
 
