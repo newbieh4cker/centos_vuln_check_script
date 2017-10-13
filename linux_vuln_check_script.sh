@@ -39,20 +39,17 @@ echo "" >> $CF 2>&1
 
 echo "############################# 시작 시간 ##############################"
 date
-echo
 
 
 echo "############################# 시작 시간 ##############################"  >> $CF 2>&1
 date >> $CF 2>&1
-echo >> $CF 2>&1
 
 
 echo "============================  시스템  정보 ===========================" >> $CF 2>&1
 echo >> $CF 2>&1
 
 echo "1. 시스템 기본 정보" >> $CF 2>&1
-echo "    운영체제	: " `uname -a | awk '{print $1}'` >> $CF 2>&1
-echo "    하드웨어	: " `uname -m` >> $CF 2>&1
+echo "    운영체제	: " `head -n 1 /etc/centos-release` >> $CF 2>&1
 echo "    호스트 이름	: " `uname -n` >> $CF 2>&1
 echo "    커널 버전	: " `uname -r` >> $CF 2>&1
 echo >> $CF 2>&1
@@ -433,9 +430,9 @@ SB="13-3.Sticky_Bit.txt"
 
 find / -user root -perm -4000 2>/dev/null > $SF 
 find / -user root -perm -2000 2>/dev/null > $SG 
-find / -user root -perm +1000 2>/dev/null > $SB
+find / -user root -perm -1000 2>/dev/null > $SB
 
-echo "스캔 후 생성된 13-1, 13-2, 13-3.txt 파일을 참고하여 파일을 검사" >> $CF 2>&1
+echo "    스캔 후 생성된 13-1, 13-2, 13-3.txt 파일을 참고하여 파일을 검사" >> $CF 2>&1
 
 echo
 echo >> $CF 2>&1
@@ -537,7 +534,7 @@ if test -f /etc/vsftpd/vsftpd.conf
 				echo "    ==> [취약] FTP에 익명 접속이 가능합니다" >> $CF 2>&1
 		fi
 	else
-		echo " FTP 서비스가 설치되어 있지 않습니다" >> $CF 2>&1
+		echo "    [XXXX] FTP 서비스가 설치되어 있지 않습니다" >> $CF 2>&1
 fi
 
 echo
@@ -562,7 +559,7 @@ if test -f /etc/xinetd.d/rlogin
 fi
 
 RS="21-1.r services.txt"
-ls /etc/xinetd.d/r* > $RS
+ls /etc/xinetd.d/r* 2>/dev/null > $RS
 
 
 echo
@@ -682,11 +679,19 @@ echo >> $CF 2>&1
 
 echo "24. NFS 서비스 비활성화"
 echo "24. NFS 서비스 비활성화" >> $CF 2>&1
-echo "    현재, 각 런레별로 부팅 시 서비스 자동 시작 여부 설정 값  (권장값:해제)" >> $CF 2>&1
-echo "    ****************************************************************************" >> $CF 2>&1
-echo "       "`chkconfig | grep nfs | sed '2d'` >> $CF 2>&1
-echo "    ****************************************************************************" >> $CF 2>&1
-echo "    해제가 아닐 경우 \"chkconfig --level 레벨값 nfs off\" 명령어로 해제 가능" >> $CF 2>&1
+NC=`systemctl is-enabled nfs 2>/dev/null`
+
+if [[ "enable" == "$NC" ]]
+	then
+		echo "   ==> [취약] NFS 서비스가 활성화 되어 있습니다" >> $CF 2>&1
+
+elif [[ "disable" == "$NC" ]]
+	then
+		echo "   ==> [안전] NFS 서비스가 비활성화 되어 있습니다" >> $CF 2>&1
+else
+	echo "    [XXXX] NFS 서비스가 설치 되어 있지 않습니다" >> $CF 2>&1
+fi
+
 echo
 echo >> $CF 2>&1
 
@@ -765,7 +770,7 @@ if [ $SI ]
 		echo "    [OOOO] 설치된 sendmail의 버전은 $SV 입니다" >> $CF 2>&1
 		echo "    ==> [권장] 최신 버전의 설치 및 업그레이드를 위해 sendmail 데몬의 중지가 필요하기 때문에 적절한 시간대에 수행해야 함" >> $CF 2>&1
 	else
-		echo "    [XXXX] sendmail이 설치되어 있지 않습니다 "
+		echo "    [XXXX] sendmail이 설치되어 있지 않습니다 " >> $CF 2>&1
 fi
 
 echo
@@ -774,16 +779,22 @@ echo >> $CF 2>&1
 
 echo "31. 스팸 메일 릴레이 제한"
 echo "31. 스팸 메일 릴레이 제한" >> $CF 2>&1
-SP=`ls -l /etc/mail/access | awk '{print $1}'`
 
-if [ $SP ]
+if [ $SI ]
 	then
-		echo "    ==> [안전] 스팸 메일 관련 설정 사항이 저장된 파일이 존재합니다" >> $CF 2>&1
-		echo "    ==> [진행] 해당 파일을 DB화 시켜 sendmail 데몬에 인식시키는 작업을 수행합니다" >> $CF 2>&1
-		makemap hash /etc/mail/access < /etc/mail/access
-		echo "    ==> [완료] 작업을 완료하였습니다" >> $CF 2>&1
+		SP=`ls -l /etc/mail/access | awk '{print $1}'`
+		if [ $SP ]
+			then
+				SP=`ls -l /etc/mail/access | awk '{print $1}'`
+				echo "    ==> [안전] 스팸 메일 관련 설정 사항이 저장된 파일이 존재합니다" >> $CF 2>&1
+				echo "    ==> [진행] 해당 파일을 DB화 시켜 sendmail 데몬에 인식시키는 작업을 수행합니다" >> $CF 2>&1
+				makemap hash /etc/mail/access < /etc/mail/access
+				echo "    ==> [완료] 작업을 완료하였습니다" >> $CF 2>&1
+		else
+				echo "    ==> [취약] 스팸 메일 관련 설정 사항이 명시 된 파일이 존재하지 않습니다" >> $CF 2>&1
+		fi
 	else
-		echo "    ==> [취약] 스팸 메일 관련 설정 사항이 저장된 파일이 존재하지 않습니다" >> $CF 2>&1
+		echo "    [XXXX] sendmail이 설치되어 있지 않습니다" >> $CF 2>&1
 fi
 
 echo
@@ -852,17 +863,17 @@ echo >> $CF 2>&1
 
 echo "36. Apache 웹 프로세스 권한 제한"
 echo "36. Apache 웹 프로세스 권한 제한" >> $CF 2>&1
-UP=`cat /etc/httpd/conf/httpd.conf | grep User | sed -n '3p' | awk '{print $2}'`
-GP=`cat /etc/httpd/conf/httpd.conf | grep Group | sed -n '6p' | awk '{print $2}'`
+UP=`cat /etc/httpd/conf/httpd.conf | grep User | sed -n '2p' | awk '{print $2}'`
+GP=`cat /etc/httpd/conf/httpd.conf | grep Group | sed -n '2p' | awk '{print $2}'`
 
-if [ $UP != root ]
+if [ "$UP" != root ]
 	then
 		echo "    ==> [안전] 현재 설정된 웹 프로세스 User 권한  :" $UP >> $CF 2>&1
 	else
 		echo "    ==> [취약] 현재 설정된 웹 프로세스 User 권한  :" $UP >> $CF 2>&1
 fi
 
-if [ $GP != root ]
+if [ "$GP" != root ]
 	then
 		echo "    ==> [안전] 현재 설정된 웹 프로세스 Group 권한 :" $GP >> $CF 2>&1
 	else
@@ -933,8 +944,8 @@ echo >> $CF 2>&1
 echo "40. Apache 파일 업로드 및 다운로드 제한"
 echo "40. Apache 파일 업로드 및 다운로드 제한" >> $CF 2>&1
 
-US=`cat /etc/php.ini |  grep post_max_size | awk '{print $3}'`
-DS=`cat /etc/httpd/conf/httpd.conf | grep LimitRequestBody`
+US=`cat /etc/php.ini 2>/dev/null |  grep post_max_size | awk '{print $3}'`
+DS=`cat /etc/httpd/conf/httpd.conf 2>/dev/null | grep LimitRequestBody`
 
 if [ $US ]
 	then
