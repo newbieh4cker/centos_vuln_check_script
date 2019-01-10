@@ -78,7 +78,7 @@ echo "============================== 계정 관리 =============================
 echo "01. root 계정 원격 접속 제한"
 echo "01. root 계정 원격 접속 제한" >> $CF 2>&1
 
-if [ -z "`grep -v tty\? /etc/securetty`" ]
+if [ -z "`grep pts\? /etc/securetty`" ]
 	then
 		echo "    ==> [안전] 콘솔 로그인만 가능합니다" >> $CF 2>&1
 	else
@@ -95,6 +95,7 @@ echo "    ==> 최대 사용 기간          :   `cat /etc/login.defs | grep PASS
 echo "    ==> 최소 사용 시간          :   `cat /etc/login.defs | grep PASS_MIN_DAYS | awk '{print $2}' | sed '1d'`일" >> $CF 2>&1
 echo "    ==> 최소 길이               :   `cat /etc/login.defs | grep PASS_MIN_LEN | awk '{print $2}' | sed '1d'`글자" >> $CF 2>&1
 echo "    ==> 기간 만료 경고 기간(일) :   `cat /etc/login.defs | grep PASS_WARN_AGE | awk '{print $2}' | sed '1d'`일" >> $CF 2>&1
+echo "    ==> 권장 정책 : 영문,숫자,특수문자를 조합하여 2종류 조합 시 10자리 이상, 3종류 이상 조합 시 8자리 이상(공공기간 9자리 이상)" >> $CF 2>&1
 
 echo >> $CF 2>&1
 echo
@@ -107,9 +108,11 @@ TI=`grep deny= /etc/pam.d/password-auth | awk '{print $5}' | awk -F = '{print $2
 
 if [ "`grep deny= /etc/pam.d/password-auth`" ]
 	then
-		echo "    ==> [안전] "$TI"번 로그인 실패시 계정이 잠김니다" >> $CF 2>&1
+		echo "    ==> [현재] "$TI"번 로그인 실패시 계정이 잠김니다" >> $CF 2>&1
 	else
 		echo "    ==> [취약] 계정 잠금 정책이 설정되어 있지 않습니다" >> $CF 2>&1
+	echo "    ==> [권장] 로그인 5회 이상 실패시 계정 잠" >> $CF 2>&1
+
 fi
 
 echo >> $CF 2>&1
@@ -219,7 +222,7 @@ echo "05. root홈, 패스 디렉터리 권한 및 패스 설정"
 echo "05. root홈, 패스 디렉터리 권한 및 패스 설정" >> $CF 2>&1
 echo "    root 홈 디렉터리 : " `cat /etc/passwd | grep root | sed -n '1p' | awk -F: '{print $6}'` >> $CF 2>&1
 
-GRDP=`cat /etc/passwd | grep root | sed -n '1p' | awk -F: '{print$6}' | ls -l /../ | awk '{print $1$8}' | grep root | awk -F. '{print $1}'`
+GRDP=`cat /etc/passwd | grep root | sed -n '1p' | awk -F: '{print$6}' | ls -l /../ | awk '{print $1$9}' | grep root | awk -F. '{print $1}'`
 RDP=dr-xr-x--- 
 
 if test $GRDP=$RDP
@@ -336,6 +339,33 @@ if test -f /etc/xinetd.conf
 
 else
 	echo "    [XXXX] xinetd.conf 파일이 존재하지 않습니다" >> $CF 2>&1
+	echo >> $CF 2>&1
+fi
+
+if [ -d "/etc/xinetd.d" ]
+	then
+		echo "    [OOOO] /etc/xinetd.d/ 폴더가 존재합니다" >> $CF 2>&1
+		FP=`ls -l /etc/xinetd.d/ | awk '{print $1, $9}' | sed -n '1!p' | grep -v "^-rw-r--r--"`
+		FO=`ls -l /etc/xinetd.d/ | awk '{print $3, $9}' | sed -n '1!p' | grep -v "^root"`
+		
+		if [ "$FP" ]
+			then
+				echo "    ==> [취약] 권한이 잘못 설정된 파일 있습니다. " >> $CF 2>&1
+				echo "        > " $ FP
+			else
+				echo "    ==> [안전] 해당 폴더에 서비스 파일이 존재하지 않거나, 모든 파일이 올바른 권한으로 설정되어 있습니다." >> $CF 2>&1
+		fi
+
+		if [ "$FO" ]
+			then
+				echo "    ==> [취약] 소유자 잘못 설정된 파일 있습니다. " >> $CF 2>&1
+				echo "        > " $ FO
+			else
+				echo "    ==> [안전] 해당 폴더에 서비스 파일이 존재하지 않거나, 모든 파일이 올바른 소유자로 설정되어 있습니다." >> $CF 2>&1
+		fi
+
+else
+	echo "    [XXXX] /etc/xinetd.d 폴더가 존재하지 않습니다" >> $CF 2>&1	
 fi
 
 echo
@@ -451,17 +481,17 @@ echo "15. world writable 파일 점검"
 echo "15. world writable 파일 점검" >> $CF 2>&1
 WW="15-1.World_Writable.txt"
 find / -perm -2 -ls 2>/dev/null | awk {'print $3, $11'} > $WW
-echo "    생성된 15-1.txt 및 보고서 파일 참조" >> $CF 2>&1
+echo "    생성된 15-1.World_Writable.txt 및 보고서 파일 참조" >> $CF 2>&1
 echo "    이 또한 서버 환경마다 다르기 때문에 수동적인 체크가 필요함" >> $CF 2>&1
 echo "    다만 기본적으로 시스템에 설치되는 world writable 파일 자체가 상당히 많기 때문에, " >> $CF 2>&1
-echo "    15-1.txt 목록(혹시 모를 악의적인 파일 포함)과 기본적으로 생성되는 world writable 파일 간의 비교가 필요함" >> $CF 2>&1
+echo "    15-1.World_Writable.txt 목록(혹시 모를 악의적인 파일 포함)과 기본적으로 생성되는 world writable 파일 간의 비교가 필요함" >> $CF 2>&1
 echo
 echo >> $CF 2>&1
 
 echo "16. /dev에 존재하지 않는 device 파일 점검"
 echo "16. /dev에 존재하지 않는 device 파일 점검" >> $CF 2>&1
 DF="16-1.Device_file.txt"
-find /dev -type f -exec ls -l {} \; | awk '{print $1, $8}' > $DF
+find /dev -type f -exec ls -l {} \; > $DF
 echo "    생성된 16-1.Device_file.txt 및 보고서 파일 참조" >> $CF 2>&1
 echo "    마찬가지로 서버의 환경마다 다르기 때문에 수동적인 체크가 필요함" >> $CF 2>&1
 echo
@@ -491,7 +521,7 @@ AD="18-2.hosts.deny.txt"
 cat /etc/hosts.allow 2>/dev/null > $AL
 cat /etc/hosts.deny > $AD
 
-echo "    생성된 18-1, 18-2.txt 참조" >> $CF 2>&1
+echo "    생성된 18-1.hosts.allow.txt, 18-2.hosts.deny.txt 참조" >> $CF 2>&1
 echo "    allow는 서버에 접속을 허용할 IP 목록 및 서비스가 들어있음" >> $CF 2>&1
 echo "    deny는  서버에 접속을 거부할 IP 목록 및 서비스가 들어있음" >> $CF 2>&1
 echo "    일반적으로 deny 파일의 우선순위가 높음" >> $CF 2>&1
@@ -544,7 +574,7 @@ echo "21. r 계열 서비스 비활성화"
 echo "21. r 계열 서비스 비활성화" >> $CF 2>&1
 
 echo "    스크립트 상의 진단은 rlogin만 진행" >> $CF 2>&1
-echo "    기타 r 계열 서비스 목록은 21-1. r services.txt 에서 확인" >> $CF 2>&1
+echo "    기타 r 계열 서비스 목록은 21-1. r_services.txt 에서 확인" >> $CF 2>&1
 
 if test -f /etc/xinetd.d/rlogin
 	then
@@ -558,7 +588,7 @@ if test -f /etc/xinetd.d/rlogin
 		echo "    ==> [안전] rlogin 서비스가 설치되어 있지 않습니다" >> $CF 2>&1
 fi
 
-RS="21-1.r services.txt"
+RS="21-1.r_services.txt"
 ls /etc/xinetd.d/r* 2>/dev/null > $RS
 
 
@@ -639,37 +669,36 @@ echo "23. DoS 공격에 취약한 서비스 비활성화"
 echo "23. DoS 공격에 취약한 서비스 비활성화" >> $CF 2>&1
 echo "    DoS 공격에 취약하다고 알려진 서비스들은 (echo, discard, daytime, chargen) 등이 있음" >> $CF 2>&1
 
-ET=`cat /etc/services | grep echo | sed -n '1p' | awk '{print $1}'`
-DT=`cat /etc/services | grep discard | sed -n '1p' | awk '{print $1}'`
-TT=`cat /etc/services | grep daytime | sed -n '1p' | awk '{print $1}'`
-CT=`cat /etc/services | grep chargen | sed -n '1p' | awk '{print $1}'`
+ET=`cat /etc/xinetd.d/echo 2>/dev/null | grep disable | grep no`
+DT=`cat /etc/xinetd.d/discard 2>/dev/null | grep disable | grep no`
+TT=`cat /etc/xinetd.d/daytime 2>/dev/null | grep disable | grep no`
+CT=`cat /etc/xinetd.d/chargen 2>/dev/null | grep disable | grep no`
 
-
-if [ $ET = \#echo ]
-	then
-		echo "    ==> [안전] echo    서비스가 비활성화 되어 있습니다" >> $CF 2>&1
-	else
-		echo "    ==> [취약] echo    서비스가 활성화 되어 있습니다" >> $CF 2>&1
+if [[ -z $ET ]]
+    then
+        echo "    ==> [안전] echo    서비스가 설치되어 있지 않거나 비활성화 되어 있습니다." >> $CF 2>&1
+    else
+        echo "    ==> [취약] echo    서비스가 활성화 되어 있습니다" >> $CF 2>&1
 fi
-	
-if [ $DT = \#discard ]
+
+if [[ -z $DT ]]
 	then
-		echo "    ==> [안전] discard 서비스가 비활성화 되어 있습니다" >> $CF 2>&1
+		echo "    ==> [안전] discard 서비스가 설치되어 있지 않거나 비활성화 되어 있습니다." >> $CF 2>&1
 	else
 		echo "    ==> [취약] discard 서비스가 활성화 되어 있습니다" >> $CF 2>&1
 fi
 
-if [ $TT = \#daytime ]
+if [[ -z $TT ]]
 	then
-		echo "    ==> [안전] daytime 서비스가 비활성화 되어 있습니다" >> $CF 2>&1
+		echo "    ==> [안전] daytime 서비스가 설치되어 있지 않거나 비활성화 되어 있습니다." >> $CF 2>&1
 	else
 		echo "    ==> [취약] daytime 서비스가 활성화 되어 있습니다" >> $CF 2>&1
 fi
 
 
-if [ $ET = \#chargen ]
+if [[ -z $CT ]]
 	then
-		echo "    ==> [안전] chargen 서비스가 비활성화 되어 있습니다" >> $CF 2>&1
+		echo "    ==> [안전] chargen 서비스가 설치되어 있지 않거나 비활성화 되어 있습니다." >> $CF 2>&1
 	else
 		echo "    ==> [취약] chargen 서비스가 활성화 되어 있습니다" >> $CF 2>&1
 fi
@@ -679,17 +708,15 @@ echo >> $CF 2>&1
 
 echo "24. NFS 서비스 비활성화"
 echo "24. NFS 서비스 비활성화" >> $CF 2>&1
-NC=`systemctl is-enabled nfs 2>/dev/null`
+NC=`ps -ef | egrep "nfs|statd|lockd" | sed '$d' | grep -v kblock`
 
-if [[ "enable" == "$NC" ]]
+if [ $NC ]
 	then
-		echo "   ==> [취약] NFS 서비스가 활성화 되어 있습니다" >> $CF 2>&1
+		echo "   ==> [취약] NFS 서비스가 동작 중입니다." >> $CF 2>&1
+		echo "        > " $NC
 
-elif [[ "disable" == "$NC" ]]
-	then
-		echo "   ==> [안전] NFS 서비스가 비활성화 되어 있습니다" >> $CF 2>&1
 else
-	echo "    [XXXX] NFS 서비스가 설치 되어 있지 않습니다" >> $CF 2>&1
+	echo "   ==> [안전] NFS 서비스가 동작 중이지 않습니다." >> $CF 2>&1
 fi
 
 echo
@@ -707,7 +734,17 @@ echo >> $CF 2>&1
 
 echo "26. automountd 제거"
 echo "26. automountd 제거" >> $CF 2>&1
-echo "    본 항목은 리눅스가 아닌 유닉스에만 존재함" >> $CF 2>&1
+AM=`ps -ef | grep 'automount\|autofs' | sed '$d'`
+
+if [ $AM ]
+	then
+		echo "   ==> [취약] NFS 서비스가 동작 중입니다." >> $CF 2>&1
+		echo "        > " $AM
+
+else
+	echo "   ==> [안전] NFS 서비스가 동작 중이지 않습니다." >> $CF 2>&1
+fi
+
 echo
 echo >> $CF 2>&1
 
@@ -738,22 +775,21 @@ echo >> $CF 2>&1
 echo "29. tftp, talk 서비스 비활성화"
 echo "29. tftp, talk 서비스 비활성화" >> $CF 2>&1
 
+TP=`cat /etc/xinetd.d/tftp 2>/dev/null | grep disable | grep no`
+TK=`cat /etc/xinetd.d/talk 2>/dev/null | grep disable | grep no`
 
-TP=`cat /etc/services | grep tftp | sed -n '1p' | awk '{print $1}'`
-TK=`cat /etc/services | grep talk | sed -n '1p' | awk '{print $1}'`
-
-if [ $TP = \#tftp ]
-	then
-		echo "    ==> [안전] tftp 서비스가 비활성화 되어 있습니다" >> $CF 2>&1
-	else
-		echo "    ==> [취약] tftp 서비스가 활성화 되어 있습니다" >> $CF 2>&1
+if [[ -z $TP ]]
+    then
+        echo "    ==> [안전] tftp 서비스가 설치되어 있지 않거나 비활성화 되어 있습니다." >> $CF 2>&1
+    else
+        echo "    ==> [취약] tftp 서비스가 활성화 되어 있습니다" >> $CF 2>&1
 fi
-	
-if [ $TK = \#talk ]
-	then
-		echo "    ==> [안전] talk 서비스가 비활성화 되어 있습니다" >> $CF 2>&1
-	else
-		echo "    ==> [취약] talk 서비스가 활성화 되어 있습니다" >> $CF 2>&1
+
+if [[ -z $TK ]]
+    then
+        echo "    ==> [안전] talk 서비스가 설치되어 있지 않거나 비활성화 되어 있습니다." >> $CF 2>&1
+    else
+        echo "    ==> [취약] talk 서비스가 활성화 되어 있습니다" >> $CF 2>&1
 fi
 
 echo
@@ -814,6 +850,8 @@ if [ $SI ]
 			else
 				echo "    ==> [취약] 일반사용자의 sendmail 실행 방지가 설정되어 있지 않습니다" >> $CF 2>&1
 		fi
+	else
+		echo "    [XXXX] sendmail이 설치되어 있지 않습니다" >> $CF 2>&1
 fi
 echo
 echo >> $CF 2>&1
@@ -848,13 +886,20 @@ echo >> $CF 2>&1
 
 echo "35. Apache 디렉터리 리스팅 제거"
 echo "35. Apache 디렉터리 리스팅 제거" >> $CF 2>&1
-GV=`cat /etc/httpd/conf/httpd.conf | grep Options | sed -n '1p'`
+AI=`yum list installed 2>/dev/null | grep httpd | awk '{print $1}'`
 
-if [[ $GV == *Indexes* ]]
+if [ "$AI" ]
 	then
-		echo "    ==> [취약] 디렉터리 리스팅이 설정되어 있습니다" >> $CF 2>&1
+		GV=`cat /etc/httpd/conf/httpd.conf | grep Options | sed -n '1p'`
+
+		if [[ $GV == *Indexes* ]]
+			then
+				echo "    ==> [취약] 디렉터리 리스팅이 설정되어 있습니다" >> $CF 2>&1
+			else
+				echo "    ==> [안전] 디렉터리 리스팅이 설정되어 있지 않습니다" >> $CF 2>&1
+		fi
 	else
-		echo "    ==> [안전] 디렉터리 리스팅이 설정되어 있지 않습니다" >> $CF 2>&1
+		echo "    [XXXX] Apache 서비스가 설치되어 있지 않습니다 " >> $CF 2>&1
 fi
 
 echo
@@ -863,21 +908,27 @@ echo >> $CF 2>&1
 
 echo "36. Apache 웹 프로세스 권한 제한"
 echo "36. Apache 웹 프로세스 권한 제한" >> $CF 2>&1
-UP=`cat /etc/httpd/conf/httpd.conf | grep User | sed -n '2p' | awk '{print $2}'`
-GP=`cat /etc/httpd/conf/httpd.conf | grep Group | sed -n '2p' | awk '{print $2}'`
 
-if [ "$UP" != root ]
+if [ "$AI" ]
 	then
-		echo "    ==> [안전] 현재 설정된 웹 프로세스 User 권한  :" $UP >> $CF 2>&1
-	else
-		echo "    ==> [취약] 현재 설정된 웹 프로세스 User 권한  :" $UP >> $CF 2>&1
-fi
+		UP=`cat /etc/httpd/conf/httpd.conf | grep User | sed -n '3p' | awk '{print $2}'`
+		GP=`cat /etc/httpd/conf/httpd.conf | grep Group | sed -n '3p' | awk '{print $2}'`
 
-if [ "$GP" != root ]
-	then
-		echo "    ==> [안전] 현재 설정된 웹 프로세스 Group 권한 :" $GP >> $CF 2>&1
+		if [ "$UP" != root ]
+			then
+				echo "    ==> [안전] 현재 설정된 웹 프로세스 User 권한  :" $UP >> $CF 2>&1
+			else
+				echo "    ==> [취약] 현재 설정된 웹 프로세스 User 권한  :" $UP >> $CF 2>&1
+		fi
+
+		if [ "$GP" != root ]
+			then
+				echo "    ==> [안전] 현재 설정된 웹 프로세스 Group 권한 :" $GP >> $CF 2>&1
+			else
+				echo "    ==> [취약] 현재 설정된 웹 프로세스 Group 권한 :" $GP >> $CF 2>&1
+		fi
 	else
-		echo "    ==> [취약] 현재 설정된 웹 프로세스 Group 권한 :" $GP >> $CF 2>&1
+		echo "    [XXXX] Apache 서비스가 설치되어 있지 않습니다 " >> $CF 2>&1
 fi
 
 echo
@@ -887,34 +938,39 @@ echo >> $CF 2>&1
 echo "37. Apache 상위 디렉터리 접근 금지"
 echo "37. Apache 상위 디렉터리 접근 금지" >> $CF 2>&1
 
-GC=`cat /etc/httpd/conf/httpd.conf  | grep AllowOverride | sed -n '1p' | awk '{print $2}'`
-
-if [ $GC = AuthConfig ]
+if [ "$AI" ]
 	then
-		echo "    ==> [안전] 디렉터리별 사용자 인증이 설정되어 있습니다" >> $CF 2>&1
-		echo >> $CF 2>&1
-		echo "    사용자 인증이 필요한 디렉터리에 다음의 지시자들이 포함된 .htaccess 파일 생성" >> $CF 2>&1
-		echo "    ***************************************************************" >> $CF 2>&1
-		echo "    *     지시자     *                     설명                  **" >> $CF 2>&1
-		echo "    ***************************************************************" >> $CF 2>&1
-		echo "    * AuthType       *  인증 형태 (Baisc / Digest)                *" >> $CF 2>&1
-		echo "    * AuthName       *  인증 영역 (웹 브라우저의 인증창에 표시)   *" >> $CF 2>&1
-		echo "    * AuthUserFile   *  사용자 패스워드 파일의 위치               *" >> $CF 2>&1
-		echo "    * AuthGroupFile  *  그룹 파일의 위치 (옵션)                   *" >> $CF 2>&1
-		echo "    * Require        *  접근을 허용할 사용자 / 그룹 정의          *" >> $CF 2>&1
-		echo "    ***************************************************************" >> $CF 2>&1
-		echo "    ***************************************************************" >> $CF 2>&1
+		GC=`cat /etc/httpd/conf/httpd.conf  | grep AllowOverride | sed -n '1p' | awk '{print $2}'`
 
-		echo "    .htaccess 파일의 예제는 다음과 같음" >> $CF 2>&1
-		echo "    ***************************************" >> $CF 2>&1
-		echo "    # vi .htaccess" >> $CF 2>&1
-		echo "      AuthType Basic" >> $CF 2>&1
-		echo "      AuthName \"Welcome to AnonSE Server\"" >> $CF 2>&1
-		echo "      AuthUserFile /etc/shadow" >> $CF 2>&1
-		echo "      Require valid-user       " >> $CF 2>&1
-		echo "    ***************************************" >> $CF 2>&1
+		if [ $GC = AuthConfig ]
+			then
+				echo "    ==> [안전] 디렉터리별 사용자 인증이 설정되어 있습니다" >> $CF 2>&1
+				echo >> $CF 2>&1
+				echo "    사용자 인증이 필요한 디렉터리에 다음의 지시자들이 포함된 .htaccess 파일 생성" >> $CF 2>&1
+				echo "    ***************************************************************" >> $CF 2>&1
+				echo "    *     지시자     *                     설명                  **" >> $CF 2>&1
+				echo "    ***************************************************************" >> $CF 2>&1
+				echo "    * AuthType       *  인증 형태 (Baisc / Digest)                *" >> $CF 2>&1
+				echo "    * AuthName       *  인증 영역 (웹 브라우저의 인증창에 표시)   *" >> $CF 2>&1
+				echo "    * AuthUserFile   *  사용자 패스워드 파일의 위치               *" >> $CF 2>&1
+				echo "    * AuthGroupFile  *  그룹 파일의 위치 (옵션)                   *" >> $CF 2>&1
+				echo "    * Require        *  접근을 허용할 사용자 / 그룹 정의          *" >> $CF 2>&1
+				echo "    ***************************************************************" >> $CF 2>&1
+				echo "    ***************************************************************" >> $CF 2>&1
+
+				echo "    .htaccess 파일의 예제는 다음과 같음" >> $CF 2>&1
+				echo "    ***************************************" >> $CF 2>&1
+				echo "    # vi .htaccess" >> $CF 2>&1
+				echo "      AuthType Basic" >> $CF 2>&1
+				echo "      AuthName \"Welcome to AnonSE Server\"" >> $CF 2>&1
+				echo "      AuthUserFile /etc/shadow" >> $CF 2>&1
+				echo "      Require valid-user       " >> $CF 2>&1
+				echo "    ***************************************" >> $CF 2>&1
+			else
+				echo "    ==> [취약]  디렉터리별 사용자 인증이 설정되어 있지 않습니다" >> $CF 2>&1
+		fi
 	else
-		echo "    ==> [취약]  디렉터리별 사용자 인증이 설정되어 있지 않습니다" >> $CF 2>&1
+		echo "    [XXXX] Apache 서비스가 설치되어 있지 않습니다 " >> $CF 2>&1
 fi
 
 echo
@@ -923,7 +979,15 @@ echo >> $CF 2>&1
 
 echo "38. Apache 불필요한 파일 제거"
 echo "38. Apache 불필요한 파일 제거" >> $CF 2>&1
-echo "    ==> [권장] 웹 서버를 정기적으로 검사하여 불필요한 파일을 제거" >> $CF 2>&1
+
+if [ "$AI" ]
+	then
+		echo "    ==> [권장] 웹 서버를 정기적으로 검사하여 불필요한 파일을 제거" >> $CF 2>&1
+		
+	else
+		echo "    [XXXX] Apache 서비스가 설치되어 있지 않습니다 " >> $CF 2>&1
+fi
+
 echo
 echo >> $CF 2>&1
 
@@ -931,12 +995,20 @@ echo >> $CF 2>&1
 echo "39. Apache 링크 사용 금지"
 echo "39. Apache 링크 사용 금지" >> $CF 2>&1
 
-if [[ $GV == *FollowSymLinks* ]]
+if [ "$AI" ]
 	then
-		echo "    ==> [취약] Apache 상에서 심볼릭 링크 사용이 설정되어 있습니다" >> $CF 2>&1
+		GV=`cat /etc/httpd/conf/httpd.conf | grep Options | sed -n '1p'`
+
+		if [[ $GV == *FollowSymLinks* ]]
+			then
+				echo "    ==> [취약] Apache 상에서 심볼릭 링크 사용이 설정되어 있습니다" >> $CF 2>&1
+			else
+				echo "    ==> [안전] Apache 상에서 심볼릭 링크 사용이 설정되어 있지 않습니다" >> $CF 2>&1
+		fi
 	else
-		echo "    ==> [안전] Apache 상에서 심볼릭 링크 사용이 설정되어 있지 않습니다" >> $CF 2>&1
+		echo "    [XXXX] Apache 서비스가 설치되어 있지 않습니다 " >> $CF 2>&1
 fi
+
 
 echo
 echo >> $CF 2>&1
@@ -944,21 +1016,28 @@ echo >> $CF 2>&1
 echo "40. Apache 파일 업로드 및 다운로드 제한"
 echo "40. Apache 파일 업로드 및 다운로드 제한" >> $CF 2>&1
 
-US=`cat /etc/php.ini 2>/dev/null |  grep post_max_size | awk '{print $3}'`
-DS=`cat /etc/httpd/conf/httpd.conf 2>/dev/null | grep LimitRequestBody`
-
-if [ $US ]
+if [ "$AI" ]
 	then
-		echo "    ==> [안전] 업로드 가능한 파일의 최대 용량   : "$US >> $CF 2>&1
-	else
-		echo "    ==> [취약] 업로드 가능한 파일의 최대 용량   : 제한없음" >> $CF 2>&1
-fi
+		US=`cat /etc/php.ini 2>/dev/null |  grep post_max_size | awk '{print $3}'`
+		DS=`cat /etc/httpd/conf/httpd.conf 2>/dev/null | grep LimitRequestBody`
 
-if [ $DS ]
-	then
-		echo "    ==> [안전] 다운로드 가능한 파일의 최대 용량 : "$DS >> $CF 2>&1
+
+		if [ $US ]
+			then
+				echo "    ==> [안전] 업로드 가능한 파일의 최대 용량   : "$US >> $CF 2>&1
+			else
+				echo "    ==> [취약] 업로드 가능한 파일의 최대 용량   : 제한없음" >> $CF 2>&1
+		fi
+
+		if [ $DS ]
+			then
+				echo "    ==> [안전] 다운로드 가능한 파일의 최대 용량 : "$DS >> $CF 2>&1
+			else
+				echo "    ==> [취약] 다운로드 가능한 파일의 최대 용량 : 제한없음" >> $CF 2>&1
+		fi
+		
 	else
-		echo "    ==> [취약] 다운로드 가능한 파일의 최대 용량 : 제한없음" >> $CF 2>&1
+		echo "    [XXXX] Apache 서비스가 설치되어 있지 않습니다 " >> $CF 2>&1
 fi
 
 echo
@@ -966,15 +1045,24 @@ echo >> $CF 2>&1
 
 echo "41. Apache 웹 서비스 영역 분리"
 echo "41. Apache 웹 서비스 영역 분리" >> $CF 2>&1
-DR=`cat /etc/httpd/conf/httpd.conf | grep DocumentRoot | sed -n '2p' | awk '{print $2}'`
-DD="/var/www/html"
 
-if [ $DR=$DD ]
+
+if [ "$AI" ]
 	then
-		echo "    ==> [취약] DocumentRoot에 설정된 디렉터리 : $DR" >> $CF 2>&1
+		DR=`cat /etc/httpd/conf/httpd.conf | grep DocumentRoot | sed -n '2p' | awk '{print $2}'`
+		DD="/var/www/html"
+
+		if [ $DR=$DD ]
+			then
+				echo "    ==> [취약] DocumentRoot에 설정된 디렉터리 : $DR" >> $CF 2>&1
+			else
+				echo "    ==> [안전] DocumentRoot에 설정된 디렉터리 : $DR" >> $CF 2>&1
+		fi
+		
 	else
-		echo "    ==> [안전] DocumentRoot에 설정된 디렉터리 : $DR" >> $CF 2>&1
+		echo "    [XXXX] Apache 서비스가 설치되어 있지 않습니다 " >> $CF 2>&1
 fi
+
 echo
 echo
 echo >> $CF 2>&1
