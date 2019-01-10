@@ -7,5 +7,5 @@
  - CentOS 6.10 x86_64
 
 진단 방법 및 항목
- - 주요정보통신기반시설 기술적 취약점 분석평가 가이드 문서 참고
+ - [주요정보통신기반시설 기술적 취약점 분석평가 가이드 문서 참고](https://www.krcert.or.kr/data/guideView.do?bulletin_writing_sequence=27369)
  - [U01] ~ [U43] 항목 코드 진단
